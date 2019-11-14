@@ -51,18 +51,21 @@ struct Tape<T: Default> {
 
 impl<T: Default> Tape<T> {
     fn new(data: Vec<T>) -> Self {
-        Self { data, cursor: 0 }
+        Self {
+            data: data,
+            cursor: 0,
+        }
     }
 
     fn mv_right(&mut self) {
         self.cursor += 1;
         if self.cursor >= self.data.len() {
-            self.data.resize_with(self.data.len() * 2, Default::default);
+            self.data.resize_with(self.data.len() * 2, T::default);
         }
     }
 
     fn mv_left(&mut self) {
-        self.cursor -= 1
+        self.cursor -= 1;
     }
 
     fn cell(&self) -> &T {
@@ -92,11 +95,11 @@ impl Program {
     }
 
     fn inc(&mut self) {
-        *self.memory.cell_mut() += 1
+        *self.memory.cell_mut() = self.memory.cell().wrapping_add(1)
     }
 
     fn dec(&mut self) {
-        *self.memory.cell_mut() -= 1
+        *self.memory.cell_mut() = self.memory.cell().wrapping_sub(1)
     }
 
     fn mvl(&mut self) {
@@ -109,16 +112,30 @@ impl Program {
 
     fn jpb(&mut self) {
         if *self.memory.cell() != 0 {
-            while *self.ops.cell() != Operation::JumpForward {
+            let mut count = 1;
+            while count > 0 {
                 self.ops.mv_left();
+
+                if *self.ops.cell() == Operation::JumpBack {
+                    count += 1;
+                } else if *self.ops.cell() == Operation::JumpForward {
+                    count -= 1;
+                }
             }
         }
     }
 
     fn jpf(&mut self) {
         if *self.memory.cell() == 0 {
-            while *self.ops.cell() != Operation::JumpBack {
+            let mut count = 1;
+            while count > 0 {
                 self.ops.mv_right();
+
+                if *self.ops.cell() == Operation::JumpForward {
+                    count += 1;
+                } else if *self.ops.cell() == Operation::JumpBack {
+                    count -= 1;
+                }
             }
         }
     }
