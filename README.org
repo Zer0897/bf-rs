@@ -1,0 +1,14 @@
+#+title: brainfuck-rs
+#+subtitle: brainfuck interpreter written in rust
+
+Another brainfuck interpreter written in rust.
+* Usage
+  Put this in ~hello-world.bf~
+  #+begin_src brainfuck
+  ++++++++++[>+++++++>++++++++++>+++>+<<<<-]>++.>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.------.--------.>+.>.
+  #+end_src
+  Then run it with
+  #+begin_src sh
+  $ cargo run hello-world.bf
+  Hello World!
+  #+end_src
