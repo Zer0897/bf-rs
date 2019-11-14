@@ -152,8 +152,7 @@ impl Program {
         *self.memory.cell_mut() = buff.trim().parse().unwrap();
     }
 
-    /// Execute the current operation. Should not be used directly,
-    /// use `step` instead.
+    /// Execute the current operation. Should not be used directly, use `step` instead.
     fn operate(&mut self) {
         match *self.ops.cell() {
             Operation::Increment => self.inc(),
@@ -198,4 +197,123 @@ fn main() {
     let ops = parse(std::fs::File::open(input).expect("Invalid file path."));
     let mut program = Program::new(ops.collect());
     program.run();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tape_move_right() {
+        let mut tape = Tape::new(vec![0, 0]);
+        tape.mv_right();
+        assert_eq!(tape.cursor, 1);
+    }
+
+    #[test]
+    fn tape_move_left() {
+        let mut tape = Tape::new(vec![0, 0]);
+        tape.mv_right();
+        tape.mv_left();
+        assert_eq!(tape.cursor, 0);
+    }
+
+    #[test]
+    fn tape_cell() {
+        let mut tape = Tape::new(vec![0, 0]);
+        tape.mv_right();
+        assert_eq!(*tape.cell(), 0);
+    }
+
+    #[test]
+    fn prog_inc() {
+        let ops = vec![Operation::Increment];
+        let mut prog = Program::new(ops);
+        prog.run();
+        assert_eq!(*prog.memory.cell(), 1);
+    }
+
+    #[test]
+    fn prog_dec() {
+        let ops = vec![Operation::Increment, Operation::Decrement];
+        let mut prog = Program::new(ops);
+        prog.run();
+        assert_eq!(*prog.memory.cell(), 0);
+    }
+
+    #[test]
+    fn prog_inc_wrapping() {
+        let ops = vec![Operation::Increment];
+        let mut prog = Program::new(ops);
+        *prog.memory.cell_mut() = 255;
+        prog.run();
+        assert_eq!(*prog.memory.cell(), 0);
+    }
+
+    #[test]
+    fn prog_dec_wrapping() {
+        let ops = vec![Operation::Decrement];
+        let mut prog = Program::new(ops);
+        prog.run();
+        assert_eq!(*prog.memory.cell(), 255);
+    }
+
+    #[test]
+    fn prog_step() {
+        let ops = vec![Operation::Decrement, Operation::Increment];
+        let mut prog = Program::new(ops);
+        prog.step();
+        assert_eq!(*prog.memory.cell(), 255);
+        prog.step();
+        assert_eq!(*prog.memory.cell(), 0);
+    }
+
+    #[test]
+    fn prog_jmp() {
+        let ops = vec![
+            Operation::Increment,
+            Operation::JumpForward,
+            Operation::JumpBack,
+        ];
+        let mut prog = Program::new(ops);
+        prog.step();
+        assert_eq!(*prog.ops.cell(), Operation::JumpForward);
+        prog.step();
+        assert_eq!(*prog.ops.cell(), Operation::JumpBack);
+        prog.step();
+        assert_eq!(*prog.ops.cell(), Operation::JumpBack);
+    }
+
+    #[test]
+    fn prog_jmp_nested() {
+        let ops = vec![
+            Operation::Increment,
+            Operation::JumpForward,
+            Operation::JumpForward,
+            Operation::Decrement,
+            Operation::JumpBack,
+            Operation::JumpBack,
+        ];
+        let mut prog = Program::new(ops);
+        prog.run();
+        assert_eq!(*prog.memory.cell(), 0);
+    }
+
+    #[test]
+    fn prog_ops_extends() {
+        let ops = vec![Operation::Increment];
+        let mut prog = Program::new(ops);
+        prog.step();
+        prog.step();
+        assert_eq!(*prog.ops.cell(), Operation::NoOp);
+    }
+
+    #[test]
+    fn prog_mem_extends() {
+        let mut ops = vec![];
+        ops.resize_with(1000, || Operation::MoveRight);
+        let mut prog = Program::new(ops);
+        prog.run();
+        assert_eq!(prog.memory.cursor, 1000);
+    }
 }
