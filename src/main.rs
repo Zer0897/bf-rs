@@ -35,13 +35,10 @@ impl From<char> for Operation {
     }
 }
 
-fn parse<T: Read>(stream: T) -> impl Iterator<Item = Operation> {
-    std::io::BufReader::new(stream)
-        .bytes()
-        .filter_map(|b| b.ok())
-        .map(|b| char::from(b))
-        .map(|c| Operation::from(c))
-        .filter(|op| op != &Operation::NoOp)
+impl From<u8> for Operation {
+    fn from(n: u8) -> Self {
+        Self::from(char::from(n))
+    }
 }
 
 struct Tape<T: Default> {
@@ -51,10 +48,7 @@ struct Tape<T: Default> {
 
 impl<T: Default> Tape<T> {
     fn new(data: Vec<T>) -> Self {
-        Self {
-            data: data,
-            cursor: 0,
-        }
+        Self { data, cursor: 0 }
     }
 
     fn mv_right(&mut self) {
@@ -94,22 +88,27 @@ impl Program {
         }
     }
 
+    /// bf increment `+`
     fn inc(&mut self) {
         *self.memory.cell_mut() = self.memory.cell().wrapping_add(1)
     }
 
+    /// bf decrement `-`
     fn dec(&mut self) {
         *self.memory.cell_mut() = self.memory.cell().wrapping_sub(1)
     }
 
+    /// bf move left `<`
     fn mvl(&mut self) {
         self.memory.mv_left()
     }
 
+    /// bf move right `>`
     fn mvr(&mut self) {
         self.memory.mv_right()
     }
 
+    /// bf jump backward `]`
     fn jpb(&mut self) {
         if *self.memory.cell() != 0 {
             let mut count = 1;
@@ -125,6 +124,7 @@ impl Program {
         }
     }
 
+    /// bf jump foward `[`
     fn jpf(&mut self) {
         if *self.memory.cell() == 0 {
             let mut count = 1;
@@ -140,16 +140,20 @@ impl Program {
         }
     }
 
+    /// bf output `.`
     fn prt(&self) {
         print!("{}", char::from(*self.memory.cell()));
     }
 
+    /// bf input `,`
     fn inp(&mut self) {
         let mut buff = String::new();
         std::io::stdin().read_line(&mut buff).unwrap();
         *self.memory.cell_mut() = buff.trim().parse().unwrap();
     }
 
+    /// Execute the current operation. Should not be used directly,
+    /// use `step` instead.
     fn operate(&mut self) {
         match *self.ops.cell() {
             Operation::Increment => self.inc(),
@@ -164,11 +168,13 @@ impl Program {
         }
     }
 
+    /// Execute the next operation
     fn step(&mut self) {
         self.operate();
         self.ops.mv_right();
     }
 
+    /// Execute all operations
     fn run(&mut self) {
         while *self.ops.cell() != Operation::NoOp {
             self.step();
@@ -176,9 +182,20 @@ impl Program {
     }
 }
 
+fn parse<T: Read>(stream: T) -> impl Iterator<Item = Operation> {
+    std::io::BufReader::new(stream)
+        .bytes()
+        // Get valid bytes
+        .filter_map(|b| b.ok())
+        // Convert to operations
+        .map(|c| Operation::from(c))
+        // Ignore NoOps
+        .filter(|op| op != &Operation::NoOp)
+}
+
 fn main() {
-    let input = std::env::args().nth(1).unwrap();
-    let reader = parse(std::fs::File::open(input).unwrap());
-    let mut program = Program::new(reader.collect());
+    let input = std::env::args().nth(1).expect("Expected a file.");
+    let ops = parse(std::fs::File::open(input).expect("Invalid file path."));
+    let mut program = Program::new(ops.collect());
     program.run();
 }

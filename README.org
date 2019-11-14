@@ -1,7 +1,6 @@
-#+title: brainfuck-rs
-#+subtitle: brainfuck interpreter written in rust
-
-Another brainfuck interpreter written in rust.
+#+title: Brainfuck Interpreter
+#+subtitle: another interpreter written in rust
+Another [[https://esolangs.org/wiki/Brainfuck][brainfuck]] interpreter written in rust.
 * Usage
   Put this in ~hello-world.bf~
   #+begin_src brainfuck
